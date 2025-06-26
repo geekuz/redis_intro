@@ -1,6 +1,9 @@
+// C:/Users/Javohir/IdeaProjects/redis_intro/src/main/java/org/learning/redis_intro/controller/RedisController.java
 package org.learning.redis_intro.controller;
 
+import org.learning.redis_intro.RedisIntroApplication; // New import for CHAT_CHANNEL
 import org.learning.redis_intro.model.Product;
+import org.learning.redis_intro.pubsub.RedisMessagePublisher; // New import
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -16,6 +19,9 @@ public class RedisController {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired // Inject the new publisher
+    private RedisMessagePublisher messagePublisher;
 
     // Define constants for our Redis keys to avoid magic strings
     private static final String PRODUCT_HASH_KEY = "Product";
@@ -41,7 +47,7 @@ public class RedisController {
     @PostMapping("/cache")
     public String cacheValue(@RequestParam String key,
                              @RequestParam String value,
-                             @RequestParam(required = false) Long ttl) { // Added optional TTL parameter
+                             @RequestParam(required = false,defaultValue = "5") Long ttl) { // Added optional TTL parameter
         // opsForValue() is for standard Redis String operations.
         if (ttl != null) {
             // If a TTL (in seconds) is provided, set the key with an expiration.
@@ -100,5 +106,13 @@ public class RedisController {
         // reverseRangeWithScores gets a range of members, sorted from highest score to lowest.
         // We get the top N players (from index 0 to top-1).
         return redisTemplate.opsForZSet().reverseRangeWithScores(LEADERBOARD_KEY, 0, top - 1);
+    }
+
+    // --- 6. Implementation using Pub/Sub (Publish/Subscribe) ---
+
+    @PostMapping("/publish")
+    public ResponseEntity<String> publishMessage(@RequestParam String message) {
+        messagePublisher.publish(message);
+        return ResponseEntity.ok("Message '" + message + "' published to channel '" + RedisIntroApplication.CHAT_CHANNEL + "'.");
     }
 }
